@@ -17,10 +17,6 @@ class DataValidator(ABC):
   def add_error(self, message: str):
     self._errors.append(message)
 
-  def validate_positive(self, value: int, field_name: str):
-    if value <= 0:
-      self.add_error(f'Pole {field_name} musi być dodatnie! Wartość: {value}')
-
   @abstractmethod
   def validate(self, data: dict):
     pass
@@ -33,7 +29,7 @@ class NumericValidator(DataValidator):
   
   @property
   def report(self):
-    return f'[TYP: NUMERYCZNY]: znaleziono {len(self._errors)} błędów'
+    return f'[TYP: NUMERYCZNY]: {self._sales_report} znaleziono {len(self._errors)} błędów'
 
   def validate_range(self, value, field_name, max_value):
     if value < self._min_value or value > max_value:
@@ -41,19 +37,33 @@ class NumericValidator(DataValidator):
   
   def validate(self, data: dict):
     for key, value in data.items():
-      self.validate_positive(value, key)
       self.validate_range(value, key, self._max_value)
 
-  class DataQualityPipeline:
-    ...
+class DataQualityPipeline:
+  def __init__(self):
+    self._validators = []
 
+  def add_validator(self, validator: DataValidator):
+    self._validators.append(validator)
+
+  def run_all(self, data: dict):
+    for val in self._validators:
+      val.validate(data)
+
+  def show_final_report(self):
+    for val in self._validators:
+      print(val.report)
 
 def main():
 
-  num_val = NumericValidator('raport_cen', 10, 100)
-  num_val.validate({'cena': -5})
-  num_val.validate({'cena': 101})
-  print(num_val.report)
+  pipeline = DataQualityPipeline()
+
+  pipeline.add_validator(NumericValidator("Ceny", min_val=10, max_val=500))
+  pipeline.add_validator(NumericValidator("Ilości", min_val=1, max_val=100))
+
+  data = {"produkt_cena": -9, "produkt_ilosc": 99}
+  pipeline.run_all(data)
+  pipeline.show_final_report()
   
 
 if __name__ == '__main__':
